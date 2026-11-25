@@ -1,131 +1,105 @@
 # FlynnLab — Infrastructure and Services Overview
 
-> **Report date:** 2026-11-25  
-> **Audience:** operators and maintainers  
-> **Scope:** physical hosts, Proxmox guests, PBS backups, the isolated Cyber Range, the AI/Incus network, and the services surfaced through Homepage.
-
-This is an operational overview rather than a credentials document. Secrets, API keys, passwords, tokens, and private certificate material are intentionally omitted.
-
-## At a glance
-
+# At a Glance
 | Area | Network / host | What it provides |
 |---|---|---|
 | Core LAN | `192.168.50.0/24` | Router, DNS, VPN, Proxmox, PBS, service LXCs, administration |
-| Cyber Range | `10.10.20.0/24` | Isolated Windows/Ubuntu lab, AD domain, web/file services, security tooling |
-| AI / agents | `10.77.0.0/24` on `ai1` | Incus containers, agent VMs, model gateway, agent orchestration, paper trading |
-| Hypervisor cluster | `PROXMOX` + `PROXMOX2` | Proxmox VE 9.2 cluster hosting Range VMs, Lab Admin, and service LXCs |
-| Backup | `pbs1` / PBS datastore `backups` | Daily Proxmox snapshot backups for LXCs 104–118 |
+| Cyber Range | `10.10.20.0/24` | Isolated lab, AD domain, web/file services, security tooling |
+| AI / agents | `10.77.0.0/24` on `ai1` | Incus containers, agent VMs, model gateway, agent orchestration |
+| Hypervisor cluster | `PROXMOX` + `PROXMOX2` | Proxmox cluster hosting Lab service LXCs |
+| Backup | `pbs1` / PBS datastore `backups` | Daily Proxmox snapshot backups for LXCs and VMs |
 
-## 1. Homelable diagram outline
 
-Homelable currently contains four canvases:
 
-1. **Full Lab Map — Hardware & Guests** — the cross-network view: router/LAN backbone, physical hosts, Proxmox guests, Range, and AI/Incus workloads.
-2. **FlynnLab — Core & Services** — `192.168.50.0/24`, including DNS/VPN, Proxmox/PBS, service LXCs, and the administration VM.
-3. **AI & Agents — 10.77.0.0/24** — `ai1`, `incusbr0`, platform containers, and agent VMs.
-4. **Cyber Range — 10.10.20.0/24** — the `rangenet` SDN, domain environment, standalone machines, and security tooling.
-
-### Topology in words
-
-```text
-Internet
-   |
-ASUS RT-AX88U router (192.168.50.1)
-   |
-Flat Lab LAN / vmbr0 (192.168.50.0/24)
-   |-- dns1 (192.168.50.2) -------- AdGuard Home
-   |-- PROXMOX (192.168.50.3) ----- Range VMs + Lab Admin VM
-   |-- vpn1 (192.168.50.4) -------- WireGuard / Uptime Kuma
-   |-- PROXMOX2 (192.168.50.5) ---- service LXCs 104–118
-   |-- PBS (192.168.50.6) ---------- Proxmox Backup Server
-   `-- ai1 (192.168.50.7) ---------- Incus / AI / OpenClaw
-                                      |
-                                      `-- incusbr0 (10.77.0.0/24)
-                                          |-- platform containers .2–.7
-                                          `-- agent VMs .10–.15
-
-PROXMOX -- rangenet SDN (10.10.20.0/24) -- DC, FS, WS, WIN1–3,
-                                           RangeWin, RangeLinux,
-                                           Velociraptor, Elastic, KBWIN, KBLIN
-```
-
-The live Full Lab canvas contained **50 nodes: 47 devices/workloads and 3 grouping zones**, with 46 edges. Core contained 27 nodes, AI contained 17, and Range contained 20; those totals include grouping zones.
-
-![Homepage Lab tab with service inventory](lab-overview-media/homepage-lab.png)
-
-*Captured Homepage view of the Lab tab. Refresh before publication if the visual state has changed.*
 
 ![Homepage Lab tab with embedded Homelable full map](lab-overview-media/homepage-lab-topology.png)
 
-*Captured Homepage view showing the embedded Homelable map, including Range, Core LXC, and AI/Incus zones.*
+*High Level Network Diagram*
 
-> **Insert screenshot of the Homelable UI itself** if a direct Homelable capture is preferred over the Homepage live-canvas embed.
-
-## 2. Hardware and host layer
+## 2. Physical Hardware Used
 
 ### Core physical hosts
 
 | Host | Address | Hardware / capacity | Role |
 |---|---:|---|---|
-| `PROXMOX` | `192.168.50.3` | HP EliteDesk 800 G8 Tower; Intel i5-11500, 6C/12T; 62 GiB RAM; ~954 GiB NVMe + ~477 GiB SSD | Main Proxmox node; Range VMs and Lab Admin |
-| `PROXMOX2` | `192.168.50.5` | HP EliteDesk 800 G6 SFF; Intel i7-10700, 8C/16T; 31 GiB RAM; ~477 GiB NVMe plus SATA/NVMe storage | Proxmox node; core service LXCs |
-| `pbs1` | `192.168.50.6` | PBS host; ~239 GiB NVMe system disk + ~932 GiB ZFS backup disk | Proxmox Backup Server |
-| `ai1` | `192.168.50.7` | Intel i7-8700, 6C/12T; 30 GiB RAM; GTX 1050 Ti; fast SSD, bulk disk, and Incus thin pool | Incus, OpenClaw, AI services, agent VMs |
+| `PROXMOX` | `192.168.50.3` | HP EliteDesk 800 G8 Tower, 62 GB RAM, 954 GB NVMe + 477 GiB SSD | Main Proxmox node: Hosts my range VMs |
+| `PROXMOX2` | `192.168.50.5` | HP EliteDesk 800 G6 SFF, 31 GB RAM, 477 GB NVMe plus SATA/NVMe storage | Proxmox node: Core lab LXCs |
+| `pbs1` | `192.168.50.6` | PBS host; ~239 GB NVMe system disk + 932 GBB ZFS backup disk | Proxmox Backup Server |
+| `ai1` | `192.168.50.7` | Intel i7-8700, 30 GB RAM, GTX 1050 Ti, fast SSD, bulk disk, and Incus thin pool | Incus, OpenClaw, AI services, agent VMs |
 | `dns1` | `192.168.50.2` | ThinkCentre 1 | AdGuard Home / LAN DNS |
 | `vpn1` | `192.168.50.4` | ThinkCentre 2 | WireGuard access and Uptime Kuma |
 
-The two Proxmox nodes are in one cluster. The current Proxmox version observed was VE **9.2.0**, manager **9.2.2**.
+The two Proxmox nodes are in one cluster with vpn1 thinkcentre forming the third party to vote (>50% of machines have to vote on cluster)
 
-> **Insert screenshot of the Proxmox cluster summary** showing both nodes, resource usage, and guest placement.
+![Proxmox](lab-overview-media/proxmox-setup.png)
 
-## 3. Core LAN services (`192.168.50.0/24`)
+*Proxmox overview*
 
-### Network and access infrastructure
+![Monitoring dashboard](lab-overview-media/monitoring-dashboard.png)
 
-| Host | Address | Service(s) | Purpose |
-|---|---:|---|---|
-| ASUS RT-AX88U | `.1` | Router UI | LAN gateway/DHCP; routes Range traffic via `PROXMOX` |
-| `dns1` | `.2` | AdGuard Home | DNS filtering and local name resolution |
-| `PROXMOX` | `.3` | Proxmox VE `:8006` | Hypervisor and Range host |
-| `vpn1` | `.4` | WireGuard / wg-easy `:51821`; Uptime Kuma `:3001` | Remote access and uptime monitoring |
-| `PROXMOX2` | `.5` | Proxmox VE `:8006` | Hypervisor and core-service host |
-| `pbs1` | `.6` | PBS `:8007` | Backup repository |
-| `ai1` | `.7` | Open WebUI `:8080`; OpenClaw `:18789`; Incus `:8443` | AI host and workload control plane |
-| Lab Admin VM | `.50` | RDP `:3389` | Administrative desktop; currently shown offline by Homelable ping checks |
+*Homepage monitoring dashboard with Kuma widgets, AI monitoring, and Beszel widgets for system useage*
 
-### Proxmox service LXCs
+## 3. FlynnLab: Proxmox Server 2 (`192.168.50.0/24`)
 
 All entries below are running on `PROXMOX2` and are represented in Homelable as service nodes rather than separate physical devices.
 
-| VMID | Name / address | Purpose |
-|---:|---|---|
-| 104 | `bootstrap` / `.22` | Certificate/bootstrap helper; nginx |
-| 105 | `outline` / `.23` | Current knowledge base and documentation system |
-| 106 | `homepage` / `.10` | Main dashboard for services, health, AI, and embedded topology |
-| 107 | `vaultwarden` / `.11` | Self-hosted password manager |
-| 108 | `apache-guacamole` / `.12` | Browser-based remote desktop gateway |
-| 109 | `pialert` / `.13` | Network discovery and device-change alerts (NetAlertX/PiAlert) |
-| 110 | `nextcloudpi` / `.14` | File sync and personal cloud storage |
-| 111 | `bookstack` / `.15` | Legacy/reference wiki; read-only for new documentation since 2026-11-20 |
-| 112 | `caddy` / `.16` | TLS termination and reverse proxy for `*.flynnlab.arpa` |
-| 113 | `authentik` / `.17` | SSO and OIDC provider |
-| 114 | `olivetin` / `.18` | Authenticated operational controls and helper actions |
-| 115 | `rocketchat` / `.19` | Internal team/agent chat |
-| 116 | `dockge` / `.20` | Docker Compose/container management |
-| 117 | `beszel` / `.21` | Host and service monitoring |
-| 118 | `homelable` / `.24` | Infrastructure topology and live status diagrams |
+![Flynnlab Pane](lab-overview-media/flynnlab-lxcs.png)
 
-![Homepage AI management and live-agent view](lab-overview-media/homepage-ai.png)
+*LXCs and services running on Proxmox 2*
 
-*Homepage AI tab: model/interface links, management services, and live agent cards.*
+### Homepage
+Main dashboard for services, health, AI, and topology, linking to each hosted service. Used in screenshots above
 
-> **Insert screenshot of Homepage Dashboard tab** showing the overall service health header and main service groups, if a current capture is required.
+### Vaultwarden
+Password Storage
+
+### Guacamole
+Terminal access to services and RDP access to range machines
+
+### Pialert
+Network Scanning
+
+### Nextcloud
+File Repo
+
+### Bookstack
+Knowledge base (Superceded by Outline and soon to be Obsidian)
+
+### Caddy
+Reverse Proxy. Adguard reroutes queries here, which then reverse proxies to actual IP. Enables HTTPS and means i dont need to remember ports
+
+### Authentik
+SSO
+
+### Olivetin
+Remote jobs. I use for backups and syncing Herdr/Obsidian to local desktop. More on this later
+
+### Rocketchat
+Used to let me talk to AI agents via webhooks
+
+### Dockge
+docker manager. Not used often
+
+### Beszel
+Instaleld as a service on my devices and feeds metrics back to beszel. Used on dashboard for monitoring RAM/CPU/Storage
+
+### Boodstrap
+HTTP server I store caddy's certificate on as well as powershell scripts to deploy on end devices to save hassle
+
+### Outline
+Another knowledge base
+
+### Homelable
+Network topology
+
+### Wake-on-LAN
+HTTP server that lets me send WOL packets when servers go down. Hosted on dns1 for redundancy
 
 ## 4. Cyber Range (`10.10.20.0/24`)
 
 The Range is an isolated Proxmox SDN named `rangenet`, with gateway `10.10.20.1` and controlled/SNAT egress. It is intentionally separated from the flat lab LAN.
 
-### Domain environment
+### Range Machines
 
 | VMID | Host | Address | Role |
 |---:|---|---:|---|
@@ -135,124 +109,77 @@ The Range is an isolated Proxmox SDN named `rangenet`, with gateway `10.10.20.1`
 | 120 | `win1.flynn.range.arpa` | `.33` | Windows 10 domain workstation |
 | 121 | `win2.flynn.range.arpa` | `.34` | Windows 10 domain workstation |
 | 122 | `win3.flynn.range.arpa` | `.35` | Windows 10 domain workstation |
-
-Together these machines form the `flynn.range.arpa` Active Directory training environment.
-
-### Standalone and security workloads
-
-| VMID | Host | Address | Role |
-|---:|---|---:|---|
 | 123 | `rangewin` | `.40` | Standalone/workgroup Windows 10 Pro; WinRM enabled |
 | 124 | `rangelinux` | `.45` | Standalone Ubuntu 24.04 server; SSH |
+
+### Range Services (Mock BTZ / FlynnTZ?)
+| VMID | Host | Address | Role |
+|---:|---|---:|---|
 | 125 | `velociraptor` | `.50` | Velociraptor endpoint/DFIR server |
 | 126 | `elastic` | `.51` | Elastic Stack; Elasticsearch and Kibana |
-| 127 | `KBWIN` | `.52` | Kookaburrow Windows node |
-| 128 | `KBLIN` | `.53` | Kookaburrow Linux node; SSH |
+| 127 | `KBWIN` | `.52` | Kookaburrow Windows node (Discussed later) |
+| 128 | `KBLIN` | `.53` | Kookaburrow Linux node SSH |
 
-Range VMs use the `rangenet` bridge and Proxmox firewalling. Most are configured not to boot automatically, which keeps the isolated lab deliberately demand-driven.
+Range VMs use the `rangenet` bridge and Proxmox firewalling. 
 
-> **Insert screenshot of the Homepage Range tab** showing the Range infrastructure and guest cards.
->
-> **Insert screenshot of the Velociraptor or Elastic dashboard** when documenting active security-tool operation rather than just placement.
+![Flynnrange Pane](lab-overview-media/flynnrange.png)
+
 
 ## 5. AI and agent platform (`10.77.0.0/24`)
 
 `ai1` hosts an Incus bridge named `incusbr0` (`10.77.0.1`) and currently reports all listed workloads running.
+
+![AI Pane](lab-overview-media/aipane.png)
+
 
 ### Platform containers
 
 | Address | Workload | Purpose |
 |---:|---|---|
 | `.2` | CouchDB / Obsidian backend | Obsidian LiveSync database and agent-vault synchronization |
-| `.3` | LiteLLM Gateway | Common model/API gateway for agent workloads |
+| `.3` | LiteLLM Gateway | Deprecated |
 | `.4` | Paperclip | Agent orchestration, assignments, and task tracking |
-| `.5` | Trades Ledger / NocoDB | Structured trading ledger |
-| `.6` | Paper Trading Gateway | Policy-enforced paper trading against live books; writes the ledger |
+| `.5` | Trades Ledger / NocoDB | WIP |
+| `.6` | Paper Trading Gateway | WIP |
 | `.7` | Herdr | Web desktop and agent-terminal interface |
 
 ### Agent VMs
 
-| Address | VM | Purpose |
+| Address | VM | Agent/Model |
 |---:|---|---|
-| `.10` | Athos | Manager/coordination agent |
-| `.11` | Bravos | Crypto worker |
-| `.12` | Cristos | Microcap/crypto worker |
-| `.13` | Dantes | Paper-only prediction-market worker |
-| `.14` | Eros | Media/general worker |
-| `.15` | Forge | App-builder/development worker |
+| `AI Server` | Samsa| Openclaw/Sonnet 5.5 |
+| `.10` | Athos | Hermes/Haiku 5.5 |
+| `.11` | Bravos | Hermes/Redacted |
+| `.12` | Cristos | Hermes/Redacted |
+| `.13` | Dantes | Hermes/Redacted |
+| `.14` | Eros | Hermes/Redacted |
+| `.15` | Forge | Claude Code/Sonnet 5.5 |
 
-The Homepage AI tab exposes live agent cards and links to OpenClaw, model access, Paperclip, the Obsidian backend, the ledger, and paper trading.
+Samsa (Lab Assistant) handles a lot of general IT work on the range, and runs Sonnet 5.5 via Openclaw as harness. 
 
-![Homepage agent cards](lab-overview-media/homepage-agents.png)
+The general agents A-E all have their own containers within Incus within AI1 server, thus have full control of their own operating systems. They cannot see the rest of the lab infrastructure. They run various models through openrouter API keys and use hermes as the harness.
 
-![Homepage Forge/agent card view](lab-overview-media/homepage-ai-forge.png)
+Forge also runs on a VM within incus. Built as a test to build and test applications, uses claude code direct with no harness due to the nature of job. Maintains forge.flynnlab.arpa for app development, writes to individual github repo via deploy keys per repo.
 
-> **Insert screenshot of the live Herdr application** if the report should document the agent chat/terminal UI rather than the Homepage summary.
+![forge](lab-overview-media/forge.png)
 
-## 6. Backups and recovery
+AI interfacing and integration covers a few areas I was testing. Primary way to speak to my lab assistant is through the native open claw gateway, whilst I utilise herdr (similar to TMUX) to speak to the rest of the agents. Also been recently using dictation tools rather than typing such as wisprflow, although this offboards post-processing to the cloud and has weekly limits on the free plan. Spokenly runs two local models for dictation and post-processing, and is very lightweight and working so far.
 
-### Proxmox Backup Server
+![herdr](lab-overview-media/herdr.png)
 
-| Item | Current value |
-|---|---|
-| Host | `pbs1` / `192.168.50.6` |
-| PBS version | 4.2.0 |
-| Datastore | `backups` |
-| Datastore path | `/backup-pool/datastore` |
-| Proxmox storage name | `pbs-backup` |
-| Scheduled job | Daily at `09:00` |
-| Guest scope | LXCs `104–118` |
-| Mode | Snapshot |
+Current way to talk to agents is via rocketchat integration, where webhooks can call each agent, and they have authority to tag other agents. Agents also use obsidian / outline as persistent memory banks, with lab assistant polling outline every 6 hours to find tasks i have written, and documenting their progress. Will also ping me on telegram once done
 
-The live Proxmox content listing showed regular daily snapshots through 2026-11-24 for the service containers. Range VMs and the Lab Admin VM are not included in the observed scheduled job; document or add a separate backup policy if those machines require the same recovery guarantee.
+![rocketchat](lab-overview-media/rocketchat.png)
+!outline(lab-overview-media/outline.png)
 
-> **Insert screenshot of the PBS datastore summary** showing capacity, verification/prune policy, and latest successful backup.
->
-> **Insert screenshot of the Proxmox backup job** showing schedule, storage, and guest selection.
+## 6. Proxmox Backup Server
 
-## 7. Homepage and documentation views
+PBS OS, runs scheduled backups from chosen LXCs daily, then prunes for storage. integration with olivetin allows me to snapshot certain range VMs or the entire range as a oner. 
 
-Homepage is the operator-facing front door. The captured views show:
+## 7. Kookaburrow threat hunting
 
-- Lab infrastructure and the Proxmox/LXC service inventory.
-- The embedded Homelable Full Lab map.
-- AI/agent services and live agent cards.
-- Outline task/status embeds.
+Threat Hunting platform using native powershell and bash scripts over winrm and SSH. Agentless, and can deploy velo/sysmon, fire KAPE/UAC/and many more and retrieve output, direct shell entry into VMs, elastic integration directly for hunts, report generation, IOC and YARA scanning, recurring hunt capability, custom script insertion, hunt scripts and action scripts, and custom monitoring of anything on a host reachable over winrm or ssh. Full documentation available *[on github](https://github.com/flynnmackie/kookaburrow)*
 
-![Homepage Outline task/status view](lab-overview-media/homepage-outline.png)
+!kookaburrow(lab-overview-media/kookaburrow.png)
 
-> **Insert screenshot of the current Homepage Dashboard tab** if this report is updated after a dashboard redesign.
->
-> **Insert screenshot of the current Outline collection/task queue** if documenting operational workflow in detail.
 
-## 8. Screenshots of other relevant services
-
-![Herdr/OliveTin operational control view](lab-overview-media/herdr-olivetin.png)
-
-This capture illustrates the operational-control pattern: a scoped action panel for checking WinRM reachability and requesting a worker to pull changes. It is included as an example of how OliveTin/Herdr is used, not as proof of current service health.
-
-> **Insert screenshot of Authentik SSO** showing the login/application catalogue.
->
-> **Insert screenshot of Caddy or a representative `*.flynnlab.arpa` service** showing the reverse-proxy/TLS front door.
->
-> **Insert screenshot of Beszel** showing the current host/guest monitoring view.
->
-> **Insert screenshot of Rocket.Chat Assistant_Room** showing agent coordination, with private credentials and unrelated conversation content excluded.
-
-## 9. Operational notes and known gaps
-
-- Homelable status currently reports the infrastructure and workloads as online except the Lab Admin VM, which is expected to be difficult to validate by ICMP from the checker.
-- The live browser session was not connected to an authenticated Homepage tab while this report was assembled; included screenshots are existing captured views and should be refreshed if visual currency matters.
-- The backup job observed covers service LXCs 104–118. Confirm separate protection for Range VMs, AI/Incus workloads, and PBS itself.
-- BookStack remains useful as legacy/reference material, but new canonical documentation belongs in Outline.
-- No secrets are stored in this report. Keep credentials in the existing secret store and restricted host files.
-
-## 10. Evidence used
-
-- Homelable API: four current canvas exports captured during report preparation.
-- Proxmox cluster inventory and guest configuration from `PROXMOX`.
-- PBS datastore/version inspection on `pbs1`.
-- Incus inventory and host hardware inspection on `ai1`.
-- Existing Homepage/service screenshots copied into `lab-overview-media/`.
-
-To publish this report, commit both `LAB-OVERVIEW.md` and the `lab-overview-media/` directory.
