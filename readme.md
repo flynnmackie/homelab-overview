@@ -31,11 +31,11 @@
 
 The two Proxmox nodes are in one cluster with vpn1 thinkcentre forming the third party to vote (>50% of machines have to vote on cluster)
 
-![Proxmox](lab-overview-media/proxmox-setup.png)
+![Proxmox](lab-overview-media/proxmox-setup.PNG)
 
 *Proxmox overview*
 
-![Monitoring dashboard](lab-overview-media/monitoring-dashboard.png)
+![Monitoring dashboard](lab-overview-media/monitoring-dashboard.PNG)
 
 *Homepage monitoring dashboard with Kuma widgets, AI monitoring, and Beszel widgets for system useage*
 
@@ -43,61 +43,45 @@ The two Proxmox nodes are in one cluster with vpn1 thinkcentre forming the third
 
 All entries below are running on `PROXMOX2` and are represented in Homelable as service nodes rather than separate physical devices.
 
-![Flynnlab Pane](lab-overview-media/flynnlab-lxcs.png)
-
+![Flynnlab Pane](lab-overview-media/flynnlab-lxcs.PNG)
 *LXCs and services running on Proxmox 2*
 
-### Homepage
+#### Homepage
 Main dashboard for services, health, AI, and topology, linking to each hosted service. Used in screenshots above
-
-### Vaultwarden
+#### Vaultwarden
 Password Storage
-
-### Guacamole
+#### Guacamole
 Terminal access to services and RDP access to range machines
-
-### Pialert
+#### Pialert
 Network Scanning
-
-### Nextcloud
+#### Nextcloud
 File Repo
-
-### Bookstack
+#### Bookstack
 Knowledge base (Superceded by Outline and soon to be Obsidian)
-
-### Caddy
+#### Caddy
 Reverse Proxy. Adguard reroutes queries here, which then reverse proxies to actual IP. Enables HTTPS and means i dont need to remember ports
-
-### Authentik
+#### Authentik
 SSO
-
-### Olivetin
+#### Olivetin
 Remote jobs. I use for backups and syncing Herdr/Obsidian to local desktop. More on this later
-
-### Rocketchat
+#### Rocketchat
 Used to let me talk to AI agents via webhooks
-
-### Dockge
+#### Dockge
 docker manager. Not used often
-
-### Beszel
+#### Beszel
 Instaleld as a service on my devices and feeds metrics back to beszel. Used on dashboard for monitoring RAM/CPU/Storage
-
-### Boodstrap
+#### Boodstrap
 HTTP server I store caddy's certificate on as well as powershell scripts to deploy on end devices to save hassle
-
-### Outline
+#### Outline
 Another knowledge base
-
-### Homelable
+#### Homelable
 Network topology
-
-### Wake-on-LAN
+#### Wake-on-LAN
 HTTP server that lets me send WOL packets when servers go down. Hosted on dns1 for redundancy
 
 ## 4. Cyber Range (`10.10.20.0/24`)
 
-The Range is an isolated Proxmox SDN named `rangenet`, with gateway `10.10.20.1` and controlled/SNAT egress. It is intentionally separated from the flat lab LAN.
+The Range is an isolated `PROXMOX1` `rangenet`, with gateway `10.10.20.1` and controlled egress. It is separated from the flat lab LAN.
 
 ### Range Machines
 
@@ -122,14 +106,14 @@ The Range is an isolated Proxmox SDN named `rangenet`, with gateway `10.10.20.1`
 
 Range VMs use the `rangenet` bridge and Proxmox firewalling. 
 
-![Flynnrange Pane](lab-overview-media/flynnrange.png)
+![Flynnrange Pane](lab-overview-media/flynnrange.PNG)
 
 
 ## 5. AI and agent platform (`10.77.0.0/24`)
 
-`ai1` hosts an Incus bridge named `incusbr0` (`10.77.0.1`) and currently reports all listed workloads running.
+`ai1` hosts an Incus bridge named `incusbr0` (`10.77.0.1`)
 
-![AI Pane](lab-overview-media/aipane.png)
+![AI Pane](lab-overview-media/aipane.PNG)
 
 
 ### Platform containers
@@ -161,16 +145,16 @@ The general agents A-E all have their own containers within Incus within AI1 ser
 
 Forge also runs on a VM within incus. Built as a test to build and test applications, uses claude code direct with no harness due to the nature of job. Maintains forge.flynnlab.arpa for app development, writes to individual github repo via deploy keys per repo.
 
-![forge](lab-overview-media/forge.png)
+![forge](lab-overview-media/forge.PNG)
 
 AI interfacing and integration covers a few areas I was testing. Primary way to speak to my lab assistant is through the native open claw gateway, whilst I utilise herdr (similar to TMUX) to speak to the rest of the agents. Also been recently using dictation tools rather than typing such as wisprflow, although this offboards post-processing to the cloud and has weekly limits on the free plan. Spokenly runs two local models for dictation and post-processing, and is very lightweight and working so far.
 
-![herdr](lab-overview-media/herdr.png)
+![herdr](lab-overview-media/herdr.PNG)
 
 Current way to talk to agents is via rocketchat integration, where webhooks can call each agent, and they have authority to tag other agents. Agents also use obsidian / outline as persistent memory banks, with lab assistant polling outline every 6 hours to find tasks i have written, and documenting their progress. Will also ping me on telegram once done
 
-![Rocketchat](lab-overview-media/rocketchat.png)
-![Outline](lab-overview-media/outline.png)
+![Rocketchat](lab-overview-media/rocketchat.PNG)
+![Outline](lab-overview-media/outline.PNG)
 
 ## 6. Proxmox Backup Server
 
@@ -180,6 +164,6 @@ PBS OS, runs scheduled backups from chosen LXCs daily, then prunes for storage. 
 
 Threat Hunting platform using native powershell and bash scripts over winrm and SSH. Agentless, and can deploy velo/sysmon, fire KAPE/UAC/and many more and retrieve output, direct shell entry into VMs, elastic integration directly for hunts, report generation, IOC and YARA scanning, recurring hunt capability, custom script insertion, hunt scripts and action scripts, and custom monitoring of anything on a host reachable over winrm or ssh. Full documentation available *[on github](https://github.com/flynnmackie/kookaburrow)*
 
-![kookaburrow](lab-overview-media/kookaburrow.png)
+![kookaburrow](lab-overview-media/kookaburrow.PNG)
 
 
