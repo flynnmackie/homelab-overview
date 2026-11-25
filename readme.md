@@ -169,8 +169,8 @@ AI interfacing and integration covers a few areas I was testing. Primary way to 
 
 Current way to talk to agents is via rocketchat integration, where webhooks can call each agent, and they have authority to tag other agents. Agents also use obsidian / outline as persistent memory banks, with lab assistant polling outline every 6 hours to find tasks i have written, and documenting their progress. Will also ping me on telegram once done
 
-![rocketchat](lab-overview-media/rocketchat.png)
-!outline(lab-overview-media/outline.png)
+![Rocketchat](lab-overview-media/rocketchat.png)
+![Outline](lab-overview-media/outline.png)
 
 ## 6. Proxmox Backup Server
 
@@ -180,6 +180,6 @@ PBS OS, runs scheduled backups from chosen LXCs daily, then prunes for storage. 
 
 Threat Hunting platform using native powershell and bash scripts over winrm and SSH. Agentless, and can deploy velo/sysmon, fire KAPE/UAC/and many more and retrieve output, direct shell entry into VMs, elastic integration directly for hunts, report generation, IOC and YARA scanning, recurring hunt capability, custom script insertion, hunt scripts and action scripts, and custom monitoring of anything on a host reachable over winrm or ssh. Full documentation available *[on github](https://github.com/flynnmackie/kookaburrow)*
 
-!kookaburrow(lab-overview-media/kookaburrow.png)
+![kookaburrow](lab-overview-media/kookaburrow.png)
 
 
